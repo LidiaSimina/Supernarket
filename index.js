@@ -1,28 +1,53 @@
 import express from "express";
 import md5 from "md5";
 import { parseToken, encryptToken } from "./functions/jwt.js";
+
+//ORM
 import mongoose from "mongoose";
 mongoose.connect('mongodb://localhost:27017/supermarket');
-
 import User from "./user.schema.js";
+
+//SQL
+import pg from "pg";
+const db = new pg.Pool({
+	"user": "postgres",
+	"host": "localhost",
+	"port": 5433,
+	"database": "supermarket",
+	"password": "000000"
+});
+db.query('CREATE TABLE IF NOT EXISTS product (id SERIAL PRIMARY KEY, name TEXT NOT NULL, sum INTEGER NOT NULL);');
+
+
 
 var app = express();
 app.use(express.json());
 
 
 
-app.route("/client")
+app.route("/product")
+	//получить количество по ID
 	.get(async function(req, res){
-		res.status(200).send("ok");
+		const body = req.body;
+		const db_req = await db.query('SELECT * FROM product WHERE id = $1', [body.id]);
+		res.json(db_req.rows[0]);
 	})
+	//новый товар
 	.post(async function(req, res){
-		res.status(200).send("ok");
+		const body = req.body;
+		const db_req = await db.query('INSERT INTO product (name, sum) VALUES ($1, $2) RETURNING *', [body.name, body.sum]);
+		res.json(db_req.rows[0]);
 	})
+	//изменить количество
 	.patch(async function(req, res){
-		res.status(200).send("ok");
+		const body = req.body;
+		const db_req = await db.query('UPDATE product SET sum = $1 WHERE id = $2', [body.sum, body.id]);
+		res.json(db_req.rows[0]);
 	})
 	.delete(async function(req, res){
-		res.status(200).send("ok");
+		const body = req.body;
+		const db_req = await db.query('DELETE FROM product WHERE id = $1', [body.id]);
+		res.json(db_req.rows[0]);
 	});
 
 app.route("/login")
